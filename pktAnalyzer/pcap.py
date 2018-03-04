@@ -7,7 +7,7 @@ import tcp
 from packetdispatcher import PacketDispatcher
 
 
-def ParsePcap(dispatcher, filename=None, reader=None):
+def ParsePcap(dispatcher, filename=None, reader=None, from_side=None):
     '''
     Parses the passed pcap file or pcap reader.
 
@@ -72,11 +72,11 @@ def ParsePcap(dispatcher, filename=None, reader=None):
         errors.append((None, error))
 
 
-def EasyParsePcap(filename=None, reader=None, endpoint=None):
+def EasyParsePcap(filename=None, reader=None, from_side=None):
     '''
     Like ParsePcap, but makes and returns a PacketDispatcher for you.
     '''
-    dispatcher = PacketDispatcher(endpoint)
-    ParsePcap(dispatcher, filename=filename, reader=reader)
+    dispatcher = PacketDispatcher()
+    ParsePcap(dispatcher, filename=filename, reader=reader, from_side=from_side)
     dispatcher.finish()
     return dispatcher

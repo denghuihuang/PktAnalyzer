@@ -5,6 +5,16 @@ from flow import NewFlowError
 
 RECEIVE_DIR = 0
 SENDER_DIR = 1
+STATE_CLOSE = 0
+STATE_SYN_SENT = 1
+STATE_SYN_RECV = 2
+STATE_ESTABLISHED = 3
+STATE_CLOSING_WAITING = 4
+STATE_LAST_ACK = 5
+STATE_FIN_WAIT1 = 6
+STATE_FIN_WAIT2 = 7
+STATE_CLOSING = 8
+STATE_TIME_WAIT = 9
 
 class EndPoint(object):
     '''
@@ -17,16 +27,151 @@ class EndPoint(object):
     * unack_send_packets = packets sent by this endpoint, but not acknowledging by peer
     * unack_recv_packets = packets receiving from peer, but acknowledged yet
     * formats:
-    *         [(pkt.seq,pkt.len,pkt)]-
+    *         [(pkt.seq,pkt.len,pkt)]
     '''
-    def __init__(self, IP, port):
+    def __init__(self, IP, port, side):
         self.IP = IP
         self.port = port
         self.unack_send_packets = []
+        self.acked_send_packets = []
         self.unack_recv_packets = []
+        self.acked_recv_packets = []
         self.retransmited_packets = []
         self.duplicated_packets = []
-        self.state = None
+        self.side = side
+        self.state = STATE_CLOSE
+        self.state_handler = {
+            STATE_CLOSE: self.state_close_handler,
+            STATE_SYN_SENT: self.state_syn_sent_handler,
+            STATE_SYN_RECV: self.state_syn_revc_handler,
+            STATE_ESTABLISHED: self.state_establish_handler,
+            STATE_CLOSING_WAITING: self.state_closing_handler,
+            STATE_LAST_ACK: self.state_last_ack_handler,
+            STATE_FIN_WAIT1: self.state_fin_wait1_handler,
+            STATE_FIN_WAIT2: self.state_fin_wait2_handler,
+            STATE_CLOSING: self.state_closing_handler,
+            STATE_TIME_WAIT: self.state_time_wait_handler
+        }
+
+    def state_syn_recv_handler(self, pkt, direction):
+        '''
+
+        Args:
+            pkt:
+            direction:
+
+        Returns:
+
+        '''
+        pass
+
+    def state_establish_handler(self, pkt, direction):
+        '''
+
+        Args:
+            pkt:
+            direction:
+
+        Returns:
+
+        '''
+        pass
+
+    def state_closing_waiting_handler(self, pkt, direction):
+        '''
+
+        Args:
+            pkt:
+            direction:
+
+        Returns:
+
+        '''
+        pass
+
+    def state_last_ack_handler(self, pkt, direction):
+        '''
+
+        Args:
+            pkt:
+            direction:
+
+        Returns:
+
+        '''
+        pass
+
+    def state_fin_wait1_handler(self, pkt, direction):
+        '''
+
+        Args:
+            pkt:
+            direction:
+
+        Returns:
+
+        '''
+        pass
+
+    def state_fin_wait2_handler(self, pkt, direction):
+        '''
+
+        Args:
+            pkt:
+            direction:
+
+        Returns:
+
+        '''
+        pass
+
+    def state_closing_handler(self, pkt, direction):
+        '''
+
+        Args:
+            pkt:
+            direction:
+
+        Returns:
+
+        '''
+        pass
+
+    def state_time_wait_handler(self, pkt, direction):
+        '''
+
+        Args:
+            pkt:
+            direction:
+
+        Returns:
+
+        '''
+        pass
+
+    def state_syn_sent_handler(self, pkt, direction):
+        '''
+
+        Args:
+            pkt:
+            direction:
+
+        Returns:
+
+        '''
+        pass
+
+    def state_close_handler(self, pkt, direction):
+        '''
+
+        Args:
+            pkt:
+            direction:
+
+        Returns:
+
+        '''
+        pass
 
     def add(self, pkt):
         '''
@@ -37,23 +182,15 @@ class EndPoint(object):
         Returns:
 
         '''
-        seq = pkt.tcp.seq
         if (self.IP, self.port) == (pkt.ip.dst, pkt.tcp.dport):
-            #recv packet
-            #state transfer
-            self.state_transfer(pkt)
-
-            self.is_duplicated_packet(pkt, RECEIVE_DIR)
-
-            self.is_retransmited_packet(pkt, RECEIVE_DIR)
-
-            pkt_info = (pkt.seq_start, pkt.seq_end, pkt)
-            self.unack_recv_packets.append(pkt_info)
-
+            #recv direction
+            direction = RECEIVE_DIR
         else:
             #send packet
-            pass
+            direction = SENDER_DIR
 
+        func = self.state_handler.get(self.state_handler)
+        func(pkt, direction)
 
     def valid_packet(self, pkt):
         '''

@@ -18,11 +18,10 @@ class FlowBuilder(object):
     flowdict = {socket: [tcp.Flow]}
     '''
 
-    def  __init__(self, endpoint):
+    def  __init__(self):
         self.flowdict = {}
-        self.endpoint = endpoint
 
-    def add(self, pkt):
+    def add(self, pkt, from_side):
         '''
         filters out unhandled packets, and sorts the remainder into the correct
         flow
@@ -31,29 +30,15 @@ class FlowBuilder(object):
         src, dst = pkt.socket
         srcip, srcport = src
         dstip, dstport = dst
-        # filter out weird packets, LSONG
-        if srcport == 5223 or dstport == 5223:
-            logging.warning('hpvirtgrp packets are ignored')
-            return
-        if srcport == 5228 or dstport == 5228:
-            logging.warning('hpvroom packets are ignored')
-            return
-        if srcport == 443 or dstport == 443:
-            logging.warning('https packets are ignored')
-            return
+
         # sort the packet into a tcp.Flow in flowdict. If NewFlowError is
         # raised, the existing flow doesn't want any more packets, so we
         # should start a new flow.
-        if (src, dst) in self.flowdict:
+        if (src, dst) in self.flowdict or (dst, src) in self.flowdict:
             try:
                 self.flowdict[(src, dst)][-1].add(pkt)
             except tcp.NewFlowError:
                 self.new_flow((src, dst), pkt)
-        elif (dst, src) in self.flowdict:
-            try:
-                self.flowdict[(dst, src)][-1].add(pkt)
-            except tcp.NewFlowError:
-                self.new_flow((dst, src), pkt)
         else:
             self.new_flow((src, dst), pkt)
 

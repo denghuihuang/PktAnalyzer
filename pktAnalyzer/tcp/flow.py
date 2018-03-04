@@ -30,18 +30,22 @@ class Flow(object):
     still being searched for, False when we've given up on finding it.
     '''
 
-    def __init__(self, endpoint):
+    def __init__(self):
         self.fwd = Direction(self)
         self.rev = Direction(self)
         self.handshake = None
         self.socket = None
         self.packets = []
-        self.server = None
-        self.client = None
-        self.endpoint = endpoint
+        self.server_endpoint = None
+        self.client_endpoint = None
+        self.side = None
+        self.endpoints = {
+            "server": None,
+            "client": None
+        }
 
 
-    def add(self, pkt):
+    def add(self, pkt, from_side):
         '''
         called for every packet coming in, instead of iterating through
         a list
@@ -62,19 +66,24 @@ class Flow(object):
         self.packets.insert(i, pkt)
 
 
-        if self.endpoint == "server":
-            self.server = EndPoint(pkt.ip.dst, pkt.tcp.dport)
-
-            self.server.add(pkt)
-
+        if from_side == "server":
             # look out for handshake
             # add it to the appropriate direction, if we've found or given up on
             # finding handshake
-            if self.handshake is not None:
+            if self.handshake is None:
                 if pkt.flags == TH_SYN:
                     # syn packet now probably means a new flow started on the same
                     # socket. Request (demand?) that a new flow be started.
+                    self.server_endpoint = self.endpoints.get(from_side)
+                    if self.server_endpoint is None:
+                        self.server_endpoint = EndPoint(pkt.ip.dst,
+                                                             pkt.tcp.dport, from_side)
+                        self.endpoints[from_side] = self.server_endpoint
+                    self.server_endpoint.add(pkt)
+                    self.handshake = True
                     raise NewFlowError
+                else:
+                    self.server_endpoint.add(pkt)
                     # self.merge_pkt(pkt)
             else:  # if handshake is None, we're still looking for a handshake
                 if len(self.packets) > 13:  # or something like that
@@ -88,8 +97,14 @@ class Flow(object):
                     self.handshake = tuple(self.packets[-3:])
                     self.socket = self.handshake[0].socket
                     self.flush_packets()
-        else:
-            pass
+        elif from_side == "client":
+            if pkt.flags == TH_SYN:
+                if self.endpoints.get(from_side) is None:
+                    self.endpoints[from_side] = EndPoint(pkt.ip.src,
+                                                         pkt.tcp.sport, from_side)
+                self.server_endpoint.add(pkt)
+                self.handshake = True
+                raise NewFlowError
 
 
     def flush_packets(self):

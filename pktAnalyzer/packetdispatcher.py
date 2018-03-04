@@ -1,6 +1,5 @@
 import dpkt
 import tcp
-import udp
 
 
 class PacketDispatcher:
@@ -16,17 +15,17 @@ class PacketDispatcher:
     * udp = udp.Processor
     '''
 
-    def __init__(self, endpoint):
-        self.tcp = tcp.FlowBuilder(endpoint)
-        self.udp = udp.Processor()
+    def __init__(self):
+        self.tcp = tcp.FlowBuilder()
+        #self.udp = udp.Processor()
 
-    def add(self, ts, buf, eth):
+    def add(self, ts, buf, eth, from_side):
         '''
         ts = dpkt timestamp
         buf = original packet data
         eth = dpkt.ethernet.Ethernet, whether its real Ethernet or from SLL
         '''
-        #decide based on pkt.data
+        # decide based on pkt.data
         # if it's IP...
         if (isinstance(eth.data, dpkt.ip.IP) or
             isinstance(eth.data, dpkt.ip6.IP6)):
@@ -34,10 +33,11 @@ class PacketDispatcher:
             # if it's TCP
             if isinstance(ip.data, dpkt.tcp.TCP):
                 tcppkt = tcp.Packet(ts, buf, eth, ip, ip.data)
-                self.tcp.add(tcppkt)
+                self.tcp.add(tcppkt, from_side)
             # if it's UDP...
             elif isinstance(ip.data, dpkt.udp.UDP):
-                self.udp.add(ts, ip.data)
+                #self.udp.add(ts, ip.data)
+                pass
 
     def finish(self):
         #This is a hack, until tcp.Flow no longer has to be `finish()`ed
